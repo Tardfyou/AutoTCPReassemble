@@ -42,13 +42,13 @@ To reassemble a TCP stream and compare it with the original file:
 1. Run the `pcapdata` executable with the required command line arguments. You will need to specify the PCAP file containing the traffic and optionally the `.orig` file for comparison.
 
     ```bash
-    ./pcapdata <input_pcap_file> <orig_file>
+    ./pcapdata <input_pcap_file>
     ```
 
     Example:
 
     ```bash
-    ./pcapdata test.pcap test.orig
+    ./pcapdata test.pcap
     ```
 
 2. The program will process the TCP packets in the provided PCAP file, reassemble the stream, and compare the result with the `.orig` file. It will output a comparison result using `md5sum` or `diff` to verify whether the reassembled data matches the original source file.
