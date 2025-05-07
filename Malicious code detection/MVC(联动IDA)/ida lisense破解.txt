@@ -1,0 +1,14 @@
+猪头三   3
+  33 楼
+我比较喜欢 IDA 9.0.240925 v2 这个版本, 也就是楼主提供的下载链接. 下载完成之后, 去找 "IDA Pro 9.0 RC1 全平台安装包 及 patch脚本.torrent" 这个种子，下载里面的: kg_patch 目录, 里面包含有keygen2.py (为了方便, 附件提供下载), 打开这个文件, 修改如下源码:
+
+
+  "name": "elf", -> 随便替换一个名字
+
+   "email": "elv@ven", -> 随便替换一个邮箱
+
+"issued_on": "2024-08-10 00:00:00", -> 修正授权文件发行时间
+
+修改好之后把keygen2.py文件复制到 IDA 9.0.240925 v2的安装目录, 运行即可, 如果成功的话, 会出现: ida.dll.patched, ida32.dll.patched, idapro.hexlic . 这3个文件就是破解好的文件了, 然后备份原版的ida.dll, ida32.dll, 把 ida.dll.patched，ida32.dll.patched 文件从命名为: ida.dll, ida32.dll.
+
+激活过程, 需要点PYTHON动手能力. 多练习就好了.
